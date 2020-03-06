@@ -19,38 +19,6 @@ class ApiWorker {
     };
     const res = await this.client.get(`${API_BASE_URL}marketinfo`, options);
     const data = JSON.parse(res.body);
-    console.log({ data, otro: "yes" });
-    return data;
-  }
-
-  async exchangeAmount(fromTo, amount = 1) {
-    const res = await this.client.get(
-      `${API_BASE_URL}/exchange-amount/${amount}/${fromTo}?api_key=${API_KEY}`
-    );
-    const data = JSON.parse(res.body);
-    return data;
-  }
-
-  async availableCurrencies(currency) {
-    const res = await this.client.get(
-      `${API_BASE_URL}/currencies-to/${currency}`
-    );
-    const data = JSON.parse(res.body);
-    return data;
-  }
-
-  async minilalExchangeAmount(fromTo) {
-    const res = await this.client.get(`${API_BASE_URL}/min-amount/${fromTo}`);
-    const data = JSON.parse(res.body);
-    return data;
-  }
-
-  async createExchange(params = {}) {
-    const res = await this.client.post(
-      `${API_BASE_URL}/min-amount/${API_KEY}`,
-      params
-    );
-    const data = JSON.parse(res.body);
     return data;
   }
 
@@ -60,11 +28,12 @@ class ApiWorker {
     return data;
   }
 
-  async createTransaction(params) {
+  async createOrder(params) {
     const options = {
       headers,
       body: JSON.stringify(params)
     };
+    console.log({ params, options });
     const { body } = await this.client.post(`${API_BASE_URL}order`, options);
     return body;
   }

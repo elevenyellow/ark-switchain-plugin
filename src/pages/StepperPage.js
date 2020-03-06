@@ -9,7 +9,11 @@ const {
   statuses,
   finishedStatuses
 } = require("../constants");
-const { valiateAddress, valiateExternalId } = require("../utils/validators");
+const {
+  valiateAddress,
+  valiateExternalId,
+  pairToObject
+} = require("../utils/validators");
 
 const exchangeInterval = 5000;
 
@@ -126,9 +130,8 @@ module.exports = {
                   <div v-else style="${exchangeInputTitle}">You send</div>
                   <input type="text" v-model.number="amount" @keyup="startRecount" style="${input}" @input="isNumber($event)"/>
                   <div class="cursor-pointer" style="${exchangeInputSearch}" ref="fromSearchBtn" @click="openSelectFrom">
-                    <img v-if="from" :src="from.image" style="${coinIcon}">
-                    <span v-if="from && isLongFromName">
-                      {{longName[from.ticker].ticker}}<sup style="${subName}">{{longName[from.ticker].sub}}</sup>
+                    <span v-if="from">
+                      {{fromTicker}}
                     </span>
                     <span v-else class='currency-coin-ticker coin-ticker-to'>
                       {{fromTicker}}
@@ -141,11 +144,10 @@ module.exports = {
                     <input type="text" style="${searchInput}" ref="searchFrom" v-model="fromFilter">
                     <div style="${currencyListContainer}">
                       <ul v-if="isListFromOpen" style="${currencyList}">
-                        <li v-for="fromCurrency in filtredFrom" style="${currencyItem}" v-bind:key="fromCurrency.ticker"
-                          class="hover:shadow-md" @click="() => selectCoinFrom(fromCurrency.ticker)">
-                          <img :src="fromCurrency.image" style="${coinIcon}">
-                          <span style="${coinTicker}">{{fromCurrency.ticker}}</span>
-                          <span style="${coinName}">{{fromCurrency.name}}</span>
+                        <li v-for="fromCurrency in filtredFrom" style="${currencyItem}" v-bind:key="fromCurrency"
+                          class="hover:shadow-md" @click="() => selectCoinFrom(fromCurrency)">
+                          <span style="${coinTicker}">{{fromCurrency}}</span>
+                          <span style="${coinName}">{{fromCurrency}}</span>
                         </li>
                       </ul>
                     </div>
@@ -164,9 +166,9 @@ module.exports = {
                       <div style="background-color: white; max-width: 250px; padding: 20px; border-radius: 3px; box-shadow: 0 4px 20px rgba(0,0,0,.45);">
                         <h4 style="color: #5c5780; font-size: 16px; margin-bottom: 10px;">This is an expected rate</h4>
                         <p style="color: #2b2b37; font-size: 14px; margin: 20px 0;">
-                          ChangeNOW will pick the best rate for you during the moment of the exchange.
+                          Switchain will pick the best rate for you during the moment of the exchange.
                         </p>
-                        <a href="https://changenow.io/faq/what-is-the-expected-exchange-rate"
+                        <a href="https://www.switchain.com/faq"
                           style="color: #3bee81; font-size: 12px;" target="_blank">
                           <div class="flex items-center">
                             Learn More
@@ -190,9 +192,8 @@ module.exports = {
                     <font-awesome-icon :icon="spinner" size="lg" rotation="180" spin/>
                   </span>
                   <div class="cursor-pointer" style="${exchangeInputSearch}" ref="toSearchBtn" @click="openSelectTo">
-                    <img v-if="to" :src="to.image" style="${coinIcon}">
-                    <span v-if="to && isLongToName">
-                      {{longName[to.ticker].ticker}}<sup style="${subName}">{{longName[to.ticker].sub}}</sup>
+                    <span v-if="to">
+                      {{toTicker}}
                     </span>
                     <span v-else>
                       {{toTicker}}
@@ -205,11 +206,10 @@ module.exports = {
                     <input type="text" style="${searchInput}" ref="searchTo" v-model="toFilter">
                     <div style="${currencyListContainer}">
                       <ul v-if="isListToOpen" style="${currencyList}">
-                        <li v-for="toCurrency in filtredTo" style="${currencyItem}" v-bind:key="toCurrency.ticker"
-                          class="hover:shadow-md" @click="() => selectCoinTo(toCurrency.ticker)">
-                          <img :src="toCurrency.image" style="${coinIcon}">
-                          <span style="${coinTicker}">{{toCurrency.ticker}}</span>
-                          <span style="${coinName}">{{toCurrency.name}}</span>
+                        <li v-for="toCurrency in filtredTo" style="${currencyItem}" v-bind:key="toCurrency"
+                          class="hover:shadow-md" @click="() => selectCoinTo(toCurrency)">
+                          <span style="${coinTicker}">{{toCurrency}}</span>
+                          <span style="${coinName}">{{toCurrency}}</span>
                         </li>
                       </ul>
                     </div>
@@ -217,11 +217,11 @@ module.exports = {
                 </div>
               </div>
 
-              <div v-if="to && to.ticker === 'ark' && arkWallets.length" class="relative" style="${addressInputBody}">
+              <div v-if="to === 'ark' && arkWallets.length" class="relative" style="${addressInputBody}">
                 <span>Recipient Wallet</span>
-                <span v-if="fullFrom && !fullFrom.isAnonymous"
+                <span v-if="from"
                 class="absolute text-xs hover:text-green cursor-pointer" style="${refundButton}" @click="toggleRefund">
-                  {{needRefund ? 'Remove refund address' : '+ Add refund address'}}
+                  Add refund address
                 </span>
                 <InputSelect :items="arkWallets" label="" name="ArkWallets" v-model="selectValue"  v-on:input="setArkAddress"/>
                 <p v-if="recipientWallet && !isValidRecipient && !recipientFocus"
@@ -232,9 +232,9 @@ module.exports = {
               </div>
               <div v-else class="relative" style="${addressInputBody}">
                 <span style="${addressInputLabel}">Recipient Wallet</span>
-                <span v-if="fullFrom && !fullFrom.isAnonymous"
+                <span v-if="from"
                 class="absolute text-xs hover:text-green cursor-pointer" style="${refundButton}" @click="toggleRefund">
-                  {{needRefund ? 'Remove refund address' : '+ Add refund address'}}
+                 Add refund address
                 </span>
                 <div style="${addressInputWrapper}">
                   <input
@@ -253,7 +253,7 @@ module.exports = {
                   This address is not valid
                 </p>
               </div>
-              <div v-if="fullTo && fullTo.hasExternalId" class="relative"  style="${addressInputBody}">
+              <div v-if="to && hasExternalId" class="relative"  style="${addressInputBody}">
                 <div style="${addressInputWrapper}">
                   <input
                     type="text"
@@ -268,7 +268,7 @@ module.exports = {
                 <p v-if="externalId && !isValidExternalId && !externalIdFocus"
                   class="text-xs" style="${inputError}">{{exstraIdValidError}}</p>
               </div>
-              <div v-if="needRefund || fullFrom && fullFrom.isAnonymous" class="relative" style="${addressInputBody}">
+              <div v-if="from" class="relative" style="${addressInputBody}">
                 <span style="${addressInputLabel}">Refund Wallet</span>
                 <div style="${addressInputWrapper}">
                   <input
@@ -306,7 +306,7 @@ module.exports = {
               <div class="flex flex-col md:flex-row md:items-center">
                 <div style="${confirmInfoData}" class="pr-6">
                   <span style="${confirmInfoLabel}">You Send</span>
-                  <span style="${confirmInfoAmount}">{{amount}} {{from.ticker}}</span>
+                  <span style="${confirmInfoAmount}">{{amount}} {{fromTicker}}</span>
                   <span style="${confirmInfoSub}">{{sequence}}</span>
                 </div>
                 <div style="${confirmArrow}" class="md:block hidden">
@@ -314,7 +314,7 @@ module.exports = {
                 </div>
                 <div style="${confirmInfoData}" class="md:pl-6">
                   <span style="${confirmInfoLabel}">You Get</span>
-                  <span style="${confirmInfoAmount}">≈ {{amountTo}} {{to.ticker}}</span>
+                  <span style="${confirmInfoAmount}">≈ {{amountTo}} {{toTicker}}</span>
                   <span style="${confirmInfoSub}">{{recipientWallet}}</span>
                 </div>
               </div>
@@ -323,8 +323,8 @@ module.exports = {
                   <p style="${confirmInfoLabel} margin-bottom: 3px;">Estimated Arrival</p>
                   <p style="${confirmInfoSub}">≈ {{transactionTime}} minutes</p>
                 </div>
-                <div v-if="fullTo.hasExternalId && externalId">
-                  <p style="${confirmInfoLabel} margin-bottom: 3px;">{{fullTo.externalIdName ? fullTo.externalIdName : 'Extra Id'}}</p>
+                <div v-if="hasExternalId && externalId">
+                  <p style="${confirmInfoLabel} margin-bottom: 3px;">{{externalIdName}}</p>
                   <p style="${confirmInfoSub}">{{externalId}}</p>
                 </div>
               </div>
@@ -335,9 +335,9 @@ module.exports = {
                 <span v-if="confirm" style="${checkboxChecked}"><font-awesome-icon  :icon="faCheck" size="lg"/></span>
               </label>
               <div style="confirmText">
-                <span>I've read and agree to the ChangeNOW
-                  <a class="no-underline"  style="color: #3bee81;" href="https://changenow.io/terms-of-use" target="blank">Terms of Use</a> and
-                  <a class="no-underline" style="color: #3bee81;"  href="https://changenow.io/privacy-policy" target="blank">Privacy Policy</a>
+                <span>I've read and agree to the Switchain
+                  <a class="no-underline"  style="color: #3bee81;" href="https://www.switchain.com/terms-of-use" target="blank">Terms of Use</a> and
+                  <a class="no-underline" style="color: #3bee81;"  href="https://www.switchain.com/privacy" target="blank">Privacy Policy</a>
                 </span>
               </div>
             </div>
@@ -427,7 +427,7 @@ module.exports = {
             <div style="${smallStep}">
               <div style="${smallStepHeader}">
                 <div style="${smallStepNumber}">1</div>
-                <p style="${smallStepName}">Your {{transaction.fromCurrency.toUpperCase()}} Wallet</p>
+                <p style="${smallStepName}">Your {{transaction.fromCurrency}} Wallet</p>
                 <span style="${stepHeaderText}">{{ parseDate(transaction.depositReceivedAt) }}</span>
               </div>
               <div class="flex">
@@ -456,7 +456,7 @@ module.exports = {
                 <div style="${smallStepInfoItem}">
                   <p style="${stepInfoHead} font-weight: 700; width: 240px;">Amount Sent</p>
                   <p style="font-size: 15px; letter-spacing: .3px;  word-break: break-all; font-weight: 700;  word-break: break-all;">
-                    {{transaction.amountSend}} {{transaction.fromCurrency.toUpperCase()}}
+                    {{transaction.amountSend}} {{transaction.fromCurrency}}
                   </p>
                 </div>
                 </div>
@@ -465,7 +465,7 @@ module.exports = {
             <div style="${smallStep}">
               <div style="${smallStepHeader}">
                 <div style="${smallStepNumber}">2</div>
-                <p style="${smallStepName}">Your {{transaction.toCurrency.toUpperCase()}} Wallet</p>
+                <p style="${smallStepName}">Your {{transaction.toCurrency}} Wallet</p>
                 <span style="${stepHeaderText}">{{ parseDate(transaction.updatedAt) }}</span>
               </div>
               <div class="flex">
@@ -483,7 +483,7 @@ module.exports = {
                     </p>
                   </div>
                   <div style="${smallStepInfoItem}">
-                    <p style="${stepInfoHead} width: 240px;">Your {{transaction.toCurrency.toUpperCase()}} Address</p>
+                    <p style="${stepInfoHead} width: 240px;">Your {{transaction.toCurrency}} Address</p>
                     <p style="font-size: 15px; letter-spacing: .3px;  word-break: break-all;">
                       <a style="color: #3bee81; word-break: break-all; user-select: all;" target="_blank"
                         :href="payoutAddressLink">
@@ -495,7 +495,7 @@ module.exports = {
                 <div style="${smallStepInfoItem}">
                   <p style="${stepInfoHead} font-weight: 700; width: 240px;">Amount Received</p>
                   <p style="font-size: 15px; letter-spacing: .3px;  word-break: break-all; font-weight: 700;  word-break: break-all;">
-                  {{transaction.amountReceive}} {{transaction.toCurrency.toUpperCase()}}
+                  {{transaction.amountReceive}} {{transaction.toCurrency}}
                   </p>
                 </div>
               </div>
@@ -537,23 +537,28 @@ module.exports = {
       recountTimeout: null,
       arkWallets: [],
       recipientWallet: "",
+      recipientWalletTag: "",
       refundWallet: "",
+      refundWalletTag: "",
       externalId: "",
       initializing: true,
       confirm: false,
       fromFilter: "",
       toFilter: "",
-      needRefund: false,
       recipientFocus: false,
       refundFocus: false,
       externalIdFocus: false,
       isListFromOpen: false,
       isListToOpen: false,
-
+      hasExternalId: false,
+      fromAddressTag: "",
+      toAddressTag: "",
       hasError: false,
       amountError: false,
+      amountMinError: false,
+      amountMaxError: false,
       minAmount: 0,
-      transactionTime: "",
+      transactionTime: "15",
       longName: {},
       isEnabled: false,
       selectValue: "",
@@ -569,33 +574,24 @@ module.exports = {
   },
 
   computed: {
-    isLongToName() {
-      return this.to && this.longName[this.to.ticker];
-    },
-    isLongFromName() {
-      return this.from && this.longName[this.from.ticker];
-    },
     isValidRecipient() {
-      return this.to
-        ? valiateAddress(this.to.ticker, this.recipientWallet)
-        : false;
+      return this.to ? valiateAddress(this.to, this.recipientWallet) : false;
     },
     isValidRefund() {
-      return this.from
-        ? valiateAddress(this.from.ticker, this.refundWallet)
-        : false;
+      return this.from ? valiateAddress(this.from, this.refundWallet) : false;
     },
     isValidExternalId() {
-      return this.to
-        ? valiateExternalId(this.to.ticker, this.externalId)
-        : false;
+      return this.to ? valiateExternalId(this.to, this.externalId) : false;
     },
     renderFromLabel() {
-      return this.from && this.amountError
-        ? `Minimum amount ${this.minAmount} ${this.from.ticker.toUpperCase()}`
-        : "";
+      const hasError = this.amountMaxError || this.amountMinError;
+      const error = this.amountMaxError
+        ? `Maximum amount ${this.maxAmount} ${this.from}`
+        : `Minimum amount ${this.minAmount} ${this.from}`;
+
+      return this.from && hasError ? error : "";
     },
-    exstraIdPalce() {
+    extraIdPalce() {
       return this.fullTo && this.fullTo.externalIdName
         ? `${this.fullTo.externalIdName} (Optional)`
         : "";
@@ -606,61 +602,43 @@ module.exports = {
         : "";
     },
     recipientPlace() {
-      return this.to
-        ? `Enter the recipient's ${this.to.ticker.toUpperCase()} address`
-        : "";
+      return this.to ? `Enter the recipient's ${this.to} address` : "";
+    },
+    externalIdName() {
+      return this.addressTag || "Extra Id";
     },
     refundPlace() {
       return this.fullFrom
-        ? `Enter ${this.fullFrom.ticker.toUpperCase()} refund address (${
+        ? `Enter ${this.fullFrom} refund address (${
             this.fullFrom.isAnonymous ? "required" : "optional"
           })`
         : "";
     },
     fromTicker() {
-      return this.from ? this.from.ticker.toUpperCase() : defaultFrom;
+      return this.from || defaultFrom;
     },
     toTicker() {
-      return this.to ? this.to.ticker.toUpperCase() : defaultTo;
+      return this.to || defaultTo;
     },
     filtredFrom() {
-      const filter = this.fromFilter.toLowerCase().trim();
-      return this.currencies.filter(currency => {
-        const name = currency.name.toLowerCase();
-        const ticker = currency.ticker.toLowerCase();
-        const isNotTo = this.to && currency.ticker !== this.to.ticker;
-        return (
-          (ticker.includes(filter) || name.includes(filter)) &&
-          !currency.isFiat &&
-          isNotTo
-        );
-      });
+      const filter = this.currencies.filter(currency => currency !== this.from);
+      return filter;
     },
     filtredTo() {
-      const filter = this.toFilter.toLowerCase().trim();
-      return this.currencies.filter(currency => {
-        const name = currency.name.toLowerCase();
-        const ticker = currency.ticker.toLowerCase();
-        const isNotFrom = this.from && currency.ticker !== this.from.ticker;
-        return (
-          (ticker.includes(filter) || name.includes(filter)) &&
-          !currency.isFiat &&
-          isNotFrom
-        );
-      });
+      const filter = this.currencies.filter(currency => currency !== this.to);
+      return filter;
     },
     validParams() {
       if (this.from && this.to && this.amount) {
         const isValidRecipient =
-          this.recipientWallet &&
-          valiateAddress(this.to.ticker, this.recipientWallet);
+          this.recipientWallet && valiateAddress(this.to, this.recipientWallet);
         const isValidRefund =
-          (this.fullFrom && this.fullFrom.isAnonymous) || this.refundWallet
-            ? valiateAddress(this.from.ticker, this.refundWallet)
+          this.from || this.refundWallet
+            ? valiateAddress(this.from, this.refundWallet)
             : true;
         const isValidExternalId =
-          (this.fullTo && !this.fullTo.hasExternalId) || this.externalId
-            ? valiateExternalId(this.to.ticker, this.externalId)
+          (this.to && !this.hasExternalId) || this.externalId
+            ? valiateExternalId(this.to, this.externalId)
             : true;
         return Boolean(
           isValidRecipient &&
@@ -760,9 +738,7 @@ module.exports = {
           toCurrency
         } = this.transaction;
         const rate = Number(amountReceive) / Number(amountSend);
-        return `1 ${fromCurrency.toUpperCase()} ≈ ${rate.toFixed(
-          7
-        )} ${toCurrency.toUpperCase()}`;
+        return `1 ${fromCurrency} ≈ ${rate.toFixed(7)} ${toCurrency}`;
       }
       return "";
     },
@@ -774,9 +750,7 @@ module.exports = {
           toCurrency
         } = this.transaction;
         const profit = Number(amountReceive) - Number(expectedReceiveAmount);
-        return profit > 0
-          ? `${profit.toFixed(8)} ${toCurrency.toUpperCase()}`
-          : "";
+        return profit > 0 ? `${profit.toFixed(8)} ${toCurrency}` : "";
       }
       return "";
     }
@@ -811,76 +785,91 @@ module.exports = {
       }
     },
     countSequence() {
+      console.log("countSequence.called");
       const price =
-        this.amountTo && this.amount
+        this.amountTo && this.amountTo !== "-" && this.amount
           ? Number(this.amountTo / this.amount).toFixed(7)
           : 0;
-      return `1 ${
-        this.from ? this.from.ticker.toUpperCase() : defaultFrom.toUpperCase()
-      } ≈ ${price || ""} ${this.to ? this.to.ticker.toUpperCase() : "ETH"}`;
+      return `1 ${this.from ? this.from : defaultFrom} ≈ ${price || ""} ${
+        this.to ? this.to : "ETH"
+      }`;
     },
+
     toggleRefund() {
       this.needRefund = !this.needRefund;
       this.refundWallet = "";
     },
-    async getFromCurrencies() {
-      this.currencies = await this.api.getAllCurrencies();
-      if (this.from) {
-        return;
-      }
-      const from = this.currencies.find(
-        currency => currency.ticker === defaultFrom
-      );
-      this.from = from;
-    },
-    getToCurrencies() {
-      if (!this.to) {
-        const to = this.currencies.find(
-          currency => currency.ticker === defaultTo
-        );
-        this.to = to
-          ? to
-          : this.currencies.filter(
-              currency => currency.ticker !== this.from.ticker
-            )[0];
+
+    async getAllCurrencies() {
+      console.log("getAllCurrencies.called");
+      try {
+        const marketInfo = await this.api.getAllCurrencies();
+        walletApi.storage.set("marketInfo", marketInfo);
+        const currencies = new Set();
+        marketInfo.forEach(({ pair }) => {
+          const { from, to } = pairToObject({ pair });
+          currencies.add(from);
+          currencies.add(to);
+        });
+        this.currencies = [...currencies];
+        return [...currencies];
+      } catch (error) {
+        walletApi.alert.error(error);
       }
     },
+
     async recountTo() {
-      if (this.from && this.to) {
+      console.log("recountTo.called");
+      const marketInfo = walletApi.storage.get("marketInfo");
+      const { from, to } = this;
+
+      if (marketInfo.length && from && to) {
         this.isCounting = true;
-        const fromTo = `${this.from.ticker}_${this.to.ticker}`;
+        const currentPair = `${from}-${to}`;
         const amount = this.amount;
-        if (this.arkWallets.length && this.to.ticker === defaultTo) {
+        if (this.arkWallets.length && this.to === defaultTo) {
           this.setArkAddress();
         }
         try {
-          this.fullFrom = await this.api.getCurrencyInfo(this.from.ticker);
-          this.fullTo = await this.api.getCurrencyInfo(this.to.ticker);
-          const { minAmount } = await this.api.minilalExchangeAmount(fromTo);
-          this.minAmount = minAmount;
-          if (minAmount > amount) {
+          const { quote, minerFee, maxLimit, minLimit } = marketInfo.find(
+            ({ pair }) => pair === currentPair
+          );
+          this.minAmount = minLimit;
+          this.maxAmount = maxLimit;
+          if (minLimit > amount) {
+            this.amountMinError = true;
             this.amountError = true;
             return;
           }
+          if (maxLimit < amount) {
+            this.amountError = true;
+            this.amountMaxError = true;
+            return;
+          }
+          this.amountMinError = false;
+          this.amountMaxError = false;
           this.amountError = false;
-          const {
-            estimatedAmount,
-            transactionSpeedForecast
-          } = await this.api.exchangeAmount(fromTo, amount);
-          this.transactionTime = transactionSpeedForecast;
-          this.amountTo = estimatedAmount;
+          const amountTo = amount * quote - minerFee;
+          this.amountTo = amountTo.toFixed(8);
           this.hasError = false;
         } catch (error) {
+          console.log("recountTo.error", { error });
           this.amountTo = 0;
           this.hasError = true;
           if (error.body) {
             const errorData = JSON.parse(error.body);
             if (errorData.error === errorType.SMALL_DEPOSIT) {
+              this.amountMinError = true;
+              this.amountError = true;
+              return;
+            }
+            if (errorData.error === errorType.BIG_DEPOSIT) {
+              this.amountMaxError = true;
               this.amountError = true;
               return;
             }
             if (errorData.error === errorType.INACTIVE) {
-              const errorMessage = `The ${this.from.ticker.toUpperCase()}/${this.to.ticker.toUpperCase()}
+              const errorMessage = `The ${this.from}/${this.to}
                 pair is temporarily unavailable for exchanges.`;
               walletApi.alert.error(errorMessage);
               return;
@@ -928,27 +917,17 @@ module.exports = {
         this.isListToOpen = true;
       }
     },
-    selectCoinFrom(ticker) {
-      const newFrom = this.currencies.find(
-        currency => currency.ticker === ticker
-      );
-      if (newFrom) {
-        this.from = newFrom;
-        walletApi.storage.set("fromCurrency", newFrom);
-      }
+    selectCoinFrom(asset) {
+      this.from = asset;
+      walletApi.storage.set("fromCurrency", asset);
       this.recountTo();
       this.refs.currencySelectFrom.style.display = "none";
       this.isListFromOpen = false;
       this.fromFilter = "";
     },
-    selectCoinTo(ticker) {
-      const newTo = this.currencies.find(
-        currency => currency.ticker === ticker
-      );
-      if (newTo) {
-        this.to = newTo;
-        walletApi.storage.set("toCurrency", newTo);
-      }
+    selectCoinTo(asset) {
+      this.to = asset;
+      walletApi.storage.set("toCurrency", asset);
       this.recountTo();
       this.refs.currencySelectTo.style.display = "none";
       this.isListToOpen = false;
@@ -968,30 +947,34 @@ module.exports = {
     },
     async createExchange() {
       if (this.validParams) {
+        const { from, to } = this;
+        const pair = `${from}-${to}`;
         const params = {
-          from: this.from.ticker,
-          to: this.to.ticker,
-          address: this.recipientWallet,
-          amount: this.amount
+          pair,
+          toAddress: this.recipientWallet,
+          refundAddress: this.refundWallet,
+          fromAmount: String(this.amount)
         };
 
-        if (this.externalId) {
-          params.extraId = this.externalId;
+        if (this.recipientWalletTag) {
+          params.toAddressTag = this.recipientWalletTag;
         }
-        if (this.refundWallet) {
-          params.refundAddress = this.refundWallet;
+        if (this.refundWalletTag) {
+          params.refundAddressTag = this.refundWalletTag;
         }
+        console.log(params);
         this.creating = true;
         try {
           this.statusTimer = walletApi.timers.setInterval(() => {
             this.checkTransactionStatus();
           }, exchangeInterval);
-          const transaction = await this.api.createTransaction(params);
-          walletApi.storage.set("transactionId", transaction.id);
+          const transaction = await this.api.createOrder(params);
+          walletApi.storage.set("transactionId", transaction.orderId);
           this.transaction = transaction;
           await this.checkTransactionStatus();
           this.currentStep = 3;
         } catch (error) {
+          console.log({ error });
           walletApi.alert.error(`Faled to create transaction.`);
         } finally {
           this.creating = false;
@@ -1002,18 +985,9 @@ module.exports = {
       if (!this.transaction) {
         return;
       }
-      const { id } = this.transaction;
+      const { orderId } = this.transaction;
       try {
-        const transactionData = await this.api.getTransactionStatus(id);
-        if (!this.fullTo || !this.fullFrom) {
-          const [from, to] = await Promise.all([
-            this.api.getCurrencyInfo(transactionData.fromCurrency),
-            this.api.getCurrencyInfo(transactionData.toCurrency)
-          ]);
-          this.fullFrom = from;
-          this.fullTo = to;
-        }
-
+        const transactionData = await this.api.getTransactionStatus(orderId);
         this.transaction = transactionData;
         if (finishedStatuses.includes(transactionData.status)) {
           if (transactionData.status === statuses.finished) {
@@ -1061,8 +1035,7 @@ module.exports = {
           this.initializing = false;
           return;
         }
-        await this.getFromCurrencies();
-        this.getToCurrencies();
+        await this.getAllCurrencies();
         await this.recountTo();
         this.initializing = false;
       } catch (error) {

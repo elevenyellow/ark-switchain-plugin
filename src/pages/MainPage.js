@@ -1,5 +1,4 @@
 const ApiWorker = require("../apiWorker");
-// const BigNumber = require("bignumber.js");
 const style = require("./mainPageStyles");
 const { longName } = require("../constants");
 const { pairToObject } = require("../utils/validators");
@@ -80,7 +79,7 @@ module.exports = {
               <input type="text" v-model.number="amount" @keyup="startRecount" style="${input}" @input="isNumber($event)"/>
               <div class="cursor-pointer" style="${exchangeInputSearch}" ref="fromSearchBtn" @click="openSelectFrom">
                 <span v-if="from">
-                  {{fromTicker}}<sup style="${subName}">{{fromTicker}}</sup>
+                  {{fromTicker}}
                 </span>
                 <span v-else class='currency-coin-ticker coin-ticker-to'>
                   {{fromTicker}}
@@ -141,7 +140,7 @@ module.exports = {
               </span>
               <div class="cursor-pointer" style="${exchangeInputSearch}" ref="toSearchBtn" @click="openSelectTo">
                 <span v-if="to">
-                {{toTicker}}<sup style="${subName}">{{toTicker}}</sup>
+                {{toTicker}}
                 </span>
                 <span v-else>
                   {{toTicker}}
