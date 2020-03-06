@@ -1,27 +1,42 @@
 {
-  "name": "NAME",
+  "name": "sw-ark-plugin",
   "version": "0.0.1",
-  "description": "DESCRIPTION",
-  "logo": "https://raw.githubusercontent.com/ark-ecosystem-desktop-plugins/template/master/logo.png",
+  "title": "ARK Exchange from Switchain",
+  "description": "Switchain plugin on Ark Desktop Wallet",
+  "logo": "https://www.switchain.com/img/logo.svg",
   "main": "src/index.js",
-  "author": "Author Name <author@ark.io>",
+  "author": "Switchain",
   "license": "MIT",
   "desktop-wallet": {
-    "title": "TITLE",
+    "title": "ARK Exchange from Switchain",
     "categories": [],
     "permissions": [
-      "THEMES"
+      "COMPONENTS",
+      "HTTP",
+      "MENU_ITEMS",
+      "MESSAGING",
+      "PROFILE_CURRENT",
+      "ROUTES",
+      "STORAGE",
+      "WEBFRAME",
+      "TIMERS",
+      "STORAGE",
+      "EVENTS",
+      "ALERTS",
+      "UI_COMPONENTS"
     ],
-    "urls": [],
+    "urls": [
+      "https://api-testnet.switchain.com/rest/v1/"
+    ],
     "minVersion": "2.6"
   },
   "keywords": [
     "@arkecosystem",
     "desktop-wallet",
-    "plugin"
-  ],
-  "contributors": [
-    "Author Name <author@ark.io>"
+    "plugin",
+    "switchain",
+    "exchange",
+    "swap"
   ],
   "bugs": {
     "url": "URL"
@@ -29,6 +44,6 @@
   "homepage": "URL",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ark-ecosystem-desktop-plugins/template.git"
+    "url": "git+https://github.com/elevenyellow.com/ark-switchain-plugin.git"
   }
 }
