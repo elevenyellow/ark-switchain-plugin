@@ -20,7 +20,7 @@ module.exports = {
       }
     ];
 
-    console.log(`I'm a plugin`);
+    console.log(`I'm a plugin reload dale`);
   },
   getComponentPaths() {
     return this.routes.reduce((all, route) => {

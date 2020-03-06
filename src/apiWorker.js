@@ -19,7 +19,7 @@ class ApiWorker {
     };
     const res = await this.client.get(`${API_BASE_URL}marketinfo`, options);
     const data = JSON.parse(res.body);
-    console.log(data);
+    console.log({ data, otro: "yes" });
     return data;
   }
 

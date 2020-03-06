@@ -1,4 +1,5 @@
 const ApiWorker = require("../apiWorker");
+// const BigNumber = require("bignumber.js");
 const style = require("./mainPageStyles");
 const { longName } = require("../constants");
 const { pairToObject } = require("../utils/validators");
@@ -208,12 +209,10 @@ module.exports = {
     },
     filtredFrom() {
       const filter = this.currencies.filter(currency => currency !== this.from);
-      console.log({ from: filter });
       return filter;
     },
     filtredTo() {
       const filter = this.currencies.filter(currency => currency !== this.to);
-      console.log({ to: filter });
       return filter;
     }
   },
@@ -244,45 +243,48 @@ module.exports = {
       }
     },
     countSequence() {
+      console.log("countSequence.called");
       const price =
         this.amountTo && this.amountTo !== "-" && this.amount
           ? Number(this.amountTo / this.amount).toFixed(7)
           : 0;
-      return `1 ${
-        this.from ? this.from.ticker.toUpperCase() : defaultFrom.toUpperCase()
-      } ≈ ${price || ""} ${this.to ? this.to.ticker.toUpperCase() : "ETH"}`;
+      return `1 ${this.from ? this.from : defaultFrom} ≈ ${price || ""} ${
+        this.to ? this.to : "ETH"
+      }`;
     },
 
     async getAllCurrencies() {
+      console.log("getAllCurrencies.called");
       try {
-        await this.api.getAllCurrencies();
-        return ["BTC", "ETH", "ARK"];
-        // walletApi.storage.set("marketInfo", marketInfo);
-        // const currencies = new Set();
-
-        // // marketInfo.forEach(({ pair }) => {
-        // //   const { from, to } = pairToObject({ pair });
-        // //   currencies.add(from);
-        // //   currencies.add(to);
-        // // });
-        // this.currencies = [...currencies];
-        // return [...currencies];
+        const marketInfo = await this.api.getAllCurrencies();
+        walletApi.storage.set("marketInfo", marketInfo);
+        const currencies = new Set();
+        marketInfo.forEach(({ pair }) => {
+          const { from, to } = pairToObject({ pair });
+          currencies.add(from);
+          currencies.add(to);
+        });
+        this.currencies = [...currencies];
+        return [...currencies];
       } catch (error) {
         walletApi.alert.error(error);
       }
     },
 
     async recountTo() {
-      if (this.from && this.to) {
+      console.log("recountTo.called");
+      const marketInfo = walletApi.storage.get("marketInfo");
+      const { from, to } = this;
+      if (marketInfo.length && from && to) {
         this.isCounting = true;
-        const fromTo = `${this.from.ticker}_${this.to.ticker}`;
+        const currentPair = `${from}-${to}`;
         const amount = this.amount;
         try {
-          const {
-            estimatedAmount,
-            transactionSpeedForecast
-          } = await this.api.exchangeAmount(fromTo, amount);
-          this.amountTo = estimatedAmount;
+          const { quote, minerFee } = marketInfo.find(
+            ({ pair }) => pair === currentPair
+          );
+          const amountTo = amount * quote - minerFee;
+          this.amountTo = amountTo.toFixed(8);
         } catch (error) {
           this.amountTo = "-";
         } finally {
@@ -292,6 +294,7 @@ module.exports = {
       }
     },
     startRecount() {
+      console.log("startRecount.called");
       walletApi.storage.set("amount", this.amount);
       if (this.recountTimeout) {
         walletApi.timers.clearTimeout(this.recountTimeout);
@@ -301,6 +304,7 @@ module.exports = {
       }, 500);
     },
     toggleCurrancies() {
+      console.log("toggleCurrancies.called");
       const prevFrom = this.from;
       this.from = this.to;
       this.to = prevFrom;
@@ -325,6 +329,7 @@ module.exports = {
     selectCoinFrom(asset) {
       this.from = asset;
       walletApi.storage.set("fromCurrency", asset);
+      this.recountTo();
       this.refs.currencySelectFrom.style.display = "none";
       this.isListFromOpen = false;
       this.fromFilter = "";
@@ -332,6 +337,7 @@ module.exports = {
     selectCoinTo(asset) {
       this.to = asset;
       walletApi.storage.set("toCurrency", asset);
+      this.recountTo();
       this.refs.currencySelectTo.style.display = "none";
       this.isListToOpen = false;
       this.toFilter = "";
@@ -368,7 +374,7 @@ module.exports = {
 
       try {
         await this.getAllCurrencies();
-        // await this.recountTo();
+        await this.recountTo();
         this.initializing = false;
       } finally {
         this.initializing = false;
