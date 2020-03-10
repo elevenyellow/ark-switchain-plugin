@@ -290,6 +290,7 @@ const exchangeInputError = `
 
 const stepThreeBlock = `
   margin-bottom: 0;
+  margin-top: 10px;
 `;
 
 const infoHeader = `
@@ -297,11 +298,12 @@ const infoHeader = `
   line-height: 22px;
   letter-spacing: .3px;
   color: #2b2b37;
+  margin-top:10px;
 `;
 
 const infoContent = `
   font-weight: 700;
-  font-size: 24px;
+  font-size: 20px;
   line-height: 1;
   letter-spacing: .5px;
   word-break: break-all;

@@ -7,13 +7,16 @@ const {
   errorType,
   longName,
   statuses,
-  finishedStatuses
+  finishedStatuses,
+  exchangingStatuses,
+  symbolsWithTag
 } = require("../constants");
 const {
   valiateAddress,
   valiateExternalId,
   pairToObject
 } = require("../utils/validators");
+const { getLink } = require("../utils/links");
 
 const exchangeInterval = 5000;
 
@@ -219,10 +222,6 @@ module.exports = {
 
               <div v-if="to === 'ark' && arkWallets.length" class="relative" style="${addressInputBody}">
                 <span>Recipient Wallet</span>
-                <span v-if="from"
-                class="absolute text-xs hover:text-green cursor-pointer" style="${refundButton}" @click="toggleRefund">
-                  Add refund address
-                </span>
                 <InputSelect :items="arkWallets" label="" name="ArkWallets" v-model="selectValue"  v-on:input="setArkAddress"/>
                 <p v-if="recipientWallet && !isValidRecipient && !recipientFocus"
                   class="text-xs"
@@ -232,10 +231,6 @@ module.exports = {
               </div>
               <div v-else class="relative" style="${addressInputBody}">
                 <span style="${addressInputLabel}">Recipient Wallet</span>
-                <span v-if="from"
-                class="absolute text-xs hover:text-green cursor-pointer" style="${refundButton}" @click="toggleRefund">
-                 Add refund address
-                </span>
                 <div style="${addressInputWrapper}">
                   <input
                     type="text"
@@ -253,20 +248,29 @@ module.exports = {
                   This address is not valid
                 </p>
               </div>
-              <div v-if="to && hasExternalId" class="relative"  style="${addressInputBody}">
+              <div v-if="to && toHasExternalId" class="relative"  style="${addressInputBody}">
                 <div style="${addressInputWrapper}">
                   <input
                     type="text"
-                    v-model="externalId"
+                    v-model="toExternalId"
                     @blur="() => externalIdFocus = false"
                     @focus="() => externalIdFocus = true"
                     class="border border-solid focus:border-green border-gray-400"
                     style="${addressInput}"
-                    :placeholder="exstraIdPalce"/>
-                    <div v-if="externalId && isValidExternalId" style="${inputSuccesValid}"><font-awesome-icon  :icon="faCheck" size="lg"/></div>
+                    placeholder="(Memo, tag...)"/>
+                    <div v-if="to && isValidToExternalId" style="${inputSuccesValid}"><font-awesome-icon  :icon="faCheck" size="lg"/></div>
                 </div>
-                <p v-if="externalId && !isValidExternalId && !externalIdFocus"
-                  class="text-xs" style="${inputError}">{{exstraIdValidError}}</p>
+                <p v-if="toExternalId && !isValidToExternalId && !externalIdFocus"
+                  class="text-xs" style="${inputError}">{{externalIdValidError}}</p>
+              </div>
+               <div v-if="from === 'ark' && arkWallets.length" class="relative" style="${addressInputBody}">
+                <span>Refund Wallet</span>
+                <InputSelect :items="arkWallets" label="" name="ArkWallets" v-model="selectRefundValue"  v-on:input="setRefundArkAddress"/>
+                <p v-if="refundWallet && !isValidRefund && !refundFocus"
+                  class="text-xs"
+                  style="${inputError}">
+                  This address is not valid
+                </p>
               </div>
               <div v-if="from" class="relative" style="${addressInputBody}">
                 <span style="${addressInputLabel}">Refund Wallet</span>
@@ -283,6 +287,21 @@ module.exports = {
                 </div>
                 <p v-if="refundWallet && !isValidRefund && !refundFocus"
                   class="text-xs" style="${inputError}">This address is not valid</p>
+              </div>
+              <div v-if="from && fromHasExternalId" class="relative"  style="${addressInputBody}">
+                <div style="${addressInputWrapper}">
+                  <input
+                    type="text"
+                    v-model="fromExternalId"
+                    @blur="() => externalIdFocus = false"
+                    @focus="() => externalIdFocus = true"
+                    class="border border-solid focus:border-green border-gray-400"
+                    style="${addressInput}"
+                    placeholder="(Memo, tag...)"/>
+                    <div v-if="from && isValidFromExternalId" style="${inputSuccesValid}"><font-awesome-icon  :icon="faCheck" size="lg"/></div>
+                </div>
+                <p v-if="fromExternalId && !isValidFromExternalId && !externalIdFocus"
+                  class="text-xs" style="${inputError}">{{externalIdValidError}}</p>
               </div>
             </div>
             <div style="${buttonsBlock}">
@@ -323,10 +342,6 @@ module.exports = {
                   <p style="${confirmInfoLabel} margin-bottom: 3px;">Estimated Arrival</p>
                   <p style="${confirmInfoSub}">≈ {{transactionTime}} minutes</p>
                 </div>
-                <div v-if="hasExternalId && externalId">
-                  <p style="${confirmInfoLabel} margin-bottom: 3px;">{{externalIdName}}</p>
-                  <p style="${confirmInfoSub}">{{externalId}}</p>
-                </div>
               </div>
             </div>
             <div style="${confirmCheckboxWrapper}">
@@ -336,8 +351,8 @@ module.exports = {
               </label>
               <div style="confirmText">
                 <span>I've read and agree to the Switchain
-                  <a class="no-underline"  style="color: #3bee81;" href="https://www.switchain.com/terms-of-use" target="blank">Terms of Use</a> and
-                  <a class="no-underline" style="color: #3bee81;"  href="https://www.switchain.com/privacy" target="blank">Privacy Policy</a>
+                  <a class="no-underline"  style="color: #3bee81;" href="https://www.switchain.com/tos" target="blank">Terms of Use</a> and
+                  <a class="no-underline" style="color: #3bee81;"  href="https://www.switchain.com/policy" target="blank">KYC/AML Policy</a>
                 </span>
               </div>
             </div>
@@ -354,49 +369,47 @@ module.exports = {
             <div style="${stepHeader} font-size: 16px;" class="relative">
               <div style="${stepNumber}">3</div>
               <span style="${stepName} color: #a4a3aa">Sending</span>
-              <span class="m-4" style="color: #a4a3aa; font-size: 16px;">Transaction Id: {{transaction.id}}</span>
+              <span class="m-4" style="color: #a4a3aa; font-size: 16px;">Transaction Id: {{transaction.orderId}}</span>
               <button style="margin-left: auto; color: #3bee81;" @click="startNewTransaction">Start new transaction</button>
             </div>
             <div style="padding: 5px 0;">
               <div style="border: 2px solid #3bee81; padding: 5px 65px 5px 10px; max-width: 650px;" class="mb-1">
                 <div style="${stepThreeBlock}">
                   <p style="${infoHeader}">You send</p>
-                  <p style="${infoContent} text-transform:uppercase;">{{transaction.expectedSendAmount}} {{transaction.fromCurrency}}</p>
+                  <p style="${infoContent} text-transform:uppercase;">{{transaction.fromAmount}} {{fromTicker}}</p>
                 </div>
                 <div style="${stepThreeBlock}">
                   <p style="${infoHeader}">To address</p>
-                  <p style="${infoContent}">{{transaction.payinAddress}} <ButtonClipboard :value="transaction.payinAddress" class="text-theme-page-text-light mx-2"/></p>
+                  <p style="${infoContent}">{{transaction.exchangeAddress}} <ButtonClipboard :value="transaction.exchangeAddress" class="text-theme-page-text-light mx-2"/></p>
                 </div>
-                <div style="${stepThreeBlock}" v-if="transaction.payinExtraId">
-                  <p style="${infoHeader}">{{transaction.payinExtraIdName}}</p>
-                  <p style="${infoContent}">{{transaction.payinExtraId}} <ButtonClipboard :value="transaction.payinExtraId" class="text-theme-page-text-light mx-2"/></p>
+                <div style="${stepThreeBlock}" v-if="transaction.exchangeAddressTag">
+                  <p style="${infoContent}"><small>Tag/memo:</small> {{transaction.exchangeAddressTag}} <ButtonClipboard :value="transaction.exchangeAddressTag" class="text-theme-page-text-light mx-2"/></p>
                 </div>
               </div>
               <div style="padding: 5px 65px 5px 10px;">
                 <div style="${stepThreeBlock}">
                   <p style="${infoHeader}">You get</p>
-                  <p style="${infoHeader} font-size: 18px; text-transform:uppercase;"> ≈ {{transaction.expectedReceiveAmount}} {{transaction.toCurrency}}</p>
+                  <p style="${infoHeader} font-size: 18px; text-transform:uppercase;"> ≈ {{transaction.rate}} {{toTicker}}</p>
                 </div>
                 <div style="${stepThreeBlock}">
                   <p style="${infoHeader}">To address</p>
-                  <p style="${infoHeader} font-size: 18px; word-break: break-all;">{{transaction.payoutAddress}}</p>
+                  <p style="${infoHeader} font-size: 18px; word-break: break-all;">{{transaction.toAddress}}</p>
                 </div>
-                <div v-if="transaction.payoutExtraId" style="${stepThreeBlock}">
-                  <p style="${infoHeader}">{{transaction.payoutExtraIdName}}</p>
-                  <p style="${infoHeader} font-size: 18px; word-break: break-all;">{{transaction.payoutExtraId}}</p>
+                <div v-if="transaction.toAddressTag" style="${stepThreeBlock}">
+                  <p style="${infoHeader} font-size: 18px; word-break: break-all;"><small>Tag/memo:</small> {{transaction.toAddressTag}}</p>
                 </div>
               </div>
               <div v-if="!isExchangeFinished" style="exchangeStatuses" class="flex items-center justify-center flex-col md:flex-row">
                 <div style="height: 35px; border: 2px solid rgba(61,61,112,.04);" class="md:w-1/3 w-full mb-1 md:mx-1  flex items-center justify-center">
-                  <font-awesome-icon v-if="confirmingStatus" :icon="faCheckCircle" size="lg" style="color: #3bee81;"/>
+                  <font-awesome-icon v-if="receivedStatus" :icon="faCheckCircle" size="lg" style="color: #3bee81;"/>
                   <font-awesome-icon v-else :icon="spinner" size="lg" rotation="180" spin style="color: #3bee81;"/>
-                  <span class="ml-2">{{confirmingStatus ? 'Deposit received' : 'Awaiting deposit'}}</span>
+                  <span class="ml-2">{{receivedStatus ? 'Deposit received' : 'Awaiting deposit'}}</span>
                 </div>
                 <div style="height: 35px; border: 2px solid rgba(61,61,112,.04);" class="md:w-1/3 w-full mb-1 md:mx-1  flex items-center justify-center">
-                  <font-awesome-icon v-if="exchangingStatus" :icon="faCheckCircle" size="lg" style="color: #3bee81;"/>
-                  <font-awesome-icon v-else-if="confirmingStatus" :icon="spinner" size="lg" rotation="180" spin style="color: #3bee81;"/>
+                  <font-awesome-icon v-if="confirmingStatus" :icon="faCheckCircle" size="lg" style="color: #3bee81;"/>
+                  <font-awesome-icon v-else-if="exchangingStatus" :icon="spinner" size="lg" rotation="180" spin style="color: #3bee81;"/>
                   <font-awesome-icon v-else :icon="faCircleNotch" size="lg" style="color: #E9E7EF;"/>
-                  <span class="ml-2">{{exchangingStatus ? 'Exchanged' : 'Exchanging'}}</span>
+                  <span class="ml-2">{{confirmingStatus ? 'Exchanged' : 'Exchanging'}}</span>
                 </div>
                 <div style="height: 35px; border: 2px solid rgba(61,61,112,.04);" class="md:w-1/3 w-full mb-1 md:mx-1 flex items-center justify-center">
                   <font-awesome-icon v-if="isExchangeFinishedSuccess" :icon="faCheckCircle" size="lg" style="color: #3bee81;"/>
@@ -408,10 +421,13 @@ module.exports = {
               <div v-if="transaction.status === statuses.failed" class="px-4 py-3 rounded my-1" style="background-color: #fff5f5;	">
                 <span class="block sm:inline" style="color: #e53e3e;">Error during exchange. Please contact support.</span>
               </div>
+              <div v-if="transaction.status === statuses.expired" class="px-4 py-3 rounded my-1" style="background-color: #fff5f5;	">
+                <span class="block sm:inline" style="color: #e53e3e;">This exchange has expired. Please start a new exchange.</span>
+              </div>
               <div class="px-2 py-1 rounded my-1" style="background-color: rgba(61,61,112,.04);">
                 <p class="mb-1" style="color: #333;">If you have any questions about your exchange, please contact our support team via email.</p>
-                <a style="color: #3bee81;" href="mailto: support@changenow.io">support@changenow.io</a>
-            </div>
+                <a style="color: #3bee81;" href="mailto: help@switchain.com">help@switchain.com</a>
+             </div>
             </div>
           </div>
           <div v-if="currentStep === 4 && transaction" class="lg:w-11/12">
@@ -419,16 +435,14 @@ module.exports = {
               <div style="${transactionSuccessIcon}">
                 <img src="https://changenow.io/images/exchange/check.svg"/>
               </div>
-              <p style="font-size: 26px; font-weight: 700; margin-botom: 10px;">Transaction is completed!</p>
-              <p v-if="hasProfit" style="font-size: 17px; font-weight: 700;">
-                You earned <span style="color: #3bee81;">{{hasProfit}}</span>  more than was expected!</p>
-                <button class="absolute" style="margin-left: auto; color: #3bee81; right: 10px; top: 10px;" @click="startNewTransaction">Start new transaction</button>
+              <p style="font-size: 26px; font-weight: 700; margin-botom: 10px; color:white">Exchange is completed!</p>
+              <button class="absolute" style="margin-left: auto; color: #3bee81; right: 10px; top: 10px;" @click="startNewTransaction">Start new exchange</button>
             </div>
             <div style="${smallStep}">
               <div style="${smallStepHeader}">
                 <div style="${smallStepNumber}">1</div>
-                <p style="${smallStepName}">Your {{transaction.fromCurrency}} Wallet</p>
-                <span style="${stepHeaderText}">{{ parseDate(transaction.depositReceivedAt) }}</span>
+                <p style="${smallStepName}">Your {{transaction.from}} Wallet</p>
+                <span style="${stepHeaderText}">{{ parseDate(transaction.createdAt) }}</span>
               </div>
               <div class="flex">
                 <div style="${smallStepInfoIcon}">
@@ -439,24 +453,24 @@ module.exports = {
                     <p style="${stepInfoHead} width: 240px;">Input Transaction Hash</p>
                     <p style="font-size: 15px; letter-spacing: .3px;  word-break: break-all;">
                       <a style="color: #3bee81; word-break: break-all; user-select: all;" :href="payinHashLink" target="_blank">
-                        {{transaction.payinHash}}
+                        {{transaction.depositTxId}}
                       </a>
-                      <ButtonClipboard :value="transaction.payinHash" class="text-theme-page-text-light mx-2"/>
+                      <ButtonClipboard :value="transaction.depositTxId" class="text-theme-page-text-light mx-2"/>
                     </p>
                   </div>
                   <div style="${smallStepInfoItem}">
-                    <p style="${stepInfoHead} width: 240px;">ChangeNOW Address</p>
+                    <p style="${stepInfoHead} width: 240px;">Switchain Address</p>
                     <p style="font-size: 15px; letter-spacing: .3px;  word-break: break-all;">
                       <a style="color: #3bee81; word-break: break-all; user-select: all;" :href="payinAddressLink" target="_blank">
-                        {{transaction.payinAddress}}
+                        {{transaction.exchangeAddress}}
                       </a>
-                      <ButtonClipboard :value="transaction.payinAddress" class="text-theme-page-text-light mx-2"/>
+                      <ButtonClipboard :value="transaction.exchangeAddress" class="text-theme-page-text-light mx-2"/>
                     </p>
                   </div>
                 <div style="${smallStepInfoItem}">
                   <p style="${stepInfoHead} font-weight: 700; width: 240px;">Amount Sent</p>
                   <p style="font-size: 15px; letter-spacing: .3px;  word-break: break-all; font-weight: 700;  word-break: break-all;">
-                    {{transaction.amountSend}} {{transaction.fromCurrency}}
+                    {{transaction.fromAmount}} {{transaction.from}}
                   </p>
                 </div>
                 </div>
@@ -465,7 +479,7 @@ module.exports = {
             <div style="${smallStep}">
               <div style="${smallStepHeader}">
                 <div style="${smallStepNumber}">2</div>
-                <p style="${smallStepName}">Your {{transaction.toCurrency}} Wallet</p>
+                <p style="${smallStepName}">Your {{toTicker}} Wallet</p>
                 <span style="${stepHeaderText}">{{ parseDate(transaction.updatedAt) }}</span>
               </div>
               <div class="flex">
@@ -477,25 +491,25 @@ module.exports = {
                     <p style="${stepInfoHead} width: 240px;">Output Transaction Hash</p>
                     <p style="font-size: 15px; letter-spacing: .3px;  word-break: break-all;">
                       <a style="color: #3bee81; word-break: break-all; user-select: all;" :href="payoutHashLink" target="_blank">
-                        {{transaction.payoutHash}}
+                        {{transaction.toTx}}
                       </a>
-                      <ButtonClipboard :value="transaction.payoutHash" class="text-theme-page-text-light mx-2"/>
+                      <ButtonClipboard :value="transaction.toTx" class="text-theme-page-text-light mx-2"/>
                     </p>
                   </div>
                   <div style="${smallStepInfoItem}">
-                    <p style="${stepInfoHead} width: 240px;">Your {{transaction.toCurrency}} Address</p>
+                    <p style="${stepInfoHead} width: 240px;">Your {{toTicker}} Address</p>
                     <p style="font-size: 15px; letter-spacing: .3px;  word-break: break-all;">
                       <a style="color: #3bee81; word-break: break-all; user-select: all;" target="_blank"
                         :href="payoutAddressLink">
-                        {{transaction.payoutAddress}}
+                        {{transaction.toAddress}}
                       </a>
-                      <ButtonClipboard :value="transaction.payoutAddress" class="text-theme-page-text-light mx-2"/>
+                      <ButtonClipboard :value="transaction.toAddress" class="text-theme-page-text-light mx-2"/>
                     </p>
                   </div>
                 <div style="${smallStepInfoItem}">
                   <p style="${stepInfoHead} font-weight: 700; width: 240px;">Amount Received</p>
                   <p style="font-size: 15px; letter-spacing: .3px;  word-break: break-all; font-weight: 700;  word-break: break-all;">
-                  {{transaction.amountReceive}} {{transaction.toCurrency}}
+                  {{transaction.rate}} {{toTicker}}
                   </p>
                 </div>
               </div>
@@ -540,6 +554,10 @@ module.exports = {
       recipientWalletTag: "",
       refundWallet: "",
       refundWalletTag: "",
+      fromHasExternalId: false,
+      toHasExternalId: false,
+      fromExternalId: "",
+      toExternalId: "",
       externalId: "",
       initializing: true,
       confirm: false,
@@ -550,7 +568,6 @@ module.exports = {
       externalIdFocus: false,
       isListFromOpen: false,
       isListToOpen: false,
-      hasExternalId: false,
       fromAddressTag: "",
       toAddressTag: "",
       hasError: false,
@@ -562,6 +579,7 @@ module.exports = {
       longName: {},
       isEnabled: false,
       selectValue: "",
+      selectRefundValue: "",
       // Step 3
       transaction: null,
       creating: false,
@@ -580,8 +598,13 @@ module.exports = {
     isValidRefund() {
       return this.from ? valiateAddress(this.from, this.refundWallet) : false;
     },
-    isValidExternalId() {
-      return this.to ? valiateExternalId(this.to, this.externalId) : false;
+    isValidFromExternalId() {
+      return this.from
+        ? valiateExternalId(this.from, this.fromExternalId)
+        : false;
+    },
+    isValidToExternalId() {
+      return this.to ? valiateExternalId(this.to, this.toExternalId) : false;
     },
     renderFromLabel() {
       const hasError = this.amountMaxError || this.amountMinError;
@@ -591,15 +614,9 @@ module.exports = {
 
       return this.from && hasError ? error : "";
     },
-    extraIdPalce() {
-      return this.fullTo && this.fullTo.externalIdName
-        ? `${this.fullTo.externalIdName} (Optional)`
-        : "";
-    },
-    exstraIdValidError() {
-      return this.fullTo && this.fullTo.externalIdName
-        ? `This ${this.fullTo.externalIdName.toLowerCase()} is not valid`
-        : "";
+
+    externalIdValidError() {
+      return `This is not a valid memo, tag...`;
     },
     recipientPlace() {
       return this.to ? `Enter the recipient's ${this.to} address` : "";
@@ -608,9 +625,9 @@ module.exports = {
       return this.addressTag || "Extra Id";
     },
     refundPlace() {
-      return this.fullFrom
-        ? `Enter ${this.fullFrom} refund address (${
-            this.fullFrom.isAnonymous ? "required" : "optional"
+      return this.from
+        ? `Enter ${this.from} refund address (${
+            this.from ? "required" : "optional"
           })`
         : "";
     },
@@ -637,8 +654,8 @@ module.exports = {
             ? valiateAddress(this.from, this.refundWallet)
             : true;
         const isValidExternalId =
-          (this.to && !this.hasExternalId) || this.externalId
-            ? valiateExternalId(this.to, this.externalId)
+          (this.to && !this.toHasExternalId) || this.toExternalId
+            ? valiateExternalId(this.to, this.toExternalId)
             : true;
         return Boolean(
           isValidRecipient &&
@@ -650,24 +667,31 @@ module.exports = {
       }
       return false;
     },
-    confirmingStatus() {
+    receivedStatus() {
       if (this.transaction) {
         const { status } = this.transaction;
-        return status === statuses.exchanging || status === statuses.sending;
+        return status !== statuses.waiting;
       }
       return false;
     },
     exchangingStatus() {
       if (this.transaction) {
         const { status } = this.transaction;
-        return status === statuses.sending;
+        return exchangingStatuses.includes(status);
+      }
+      return false;
+    },
+    confirmingStatus() {
+      if (this.transaction) {
+        const { status } = this.transaction;
+        return status === statuses.confirming || status === statuses.confirmed;
       }
       return false;
     },
     sendingStatus() {
       if (this.transaction) {
         const { status } = this.transaction;
-        return status === statuses.sending;
+        return status === statuses.confirming;
       }
       return false;
     },
@@ -681,76 +705,64 @@ module.exports = {
     isExchangeFinishedSuccess() {
       if (this.transaction) {
         const { status } = this.transaction;
-        return status === statuses.finished;
+        return status === statuses.confirmed;
       }
       return false;
     },
     payinHashLink() {
-      if (this.transaction && this.transaction.status === statuses.finished) {
-        return this.fullFrom
-          ? this.fullFrom.transactionExplorerMask.replace(
-              "$$",
-              this.transaction.payinHash
-            )
-          : "";
+      if (this.transaction && this.transaction.status === statuses.confirmed) {
+        const { depositTxId, pair } = this.transaction;
+        const { from } = pairToObject({ pair });
+        const link = getLink({ asset: from, path: "tx", hash: depositTxId });
+        return link;
       }
       return "";
     },
     payinAddressLink() {
-      if (this.transaction && this.transaction.status === statuses.finished) {
-        return this.fullFrom
-          ? this.fullFrom.addressExplorerMask.replace(
-              "$$",
-              this.transaction.payinAddress
-            )
-          : "";
+      if (this.transaction && this.transaction.status === statuses.confirmed) {
+        const { exchangeAddress, pair } = this.transaction;
+        const { from } = pairToObject({ pair });
+        const link = getLink({
+          asset: from,
+          path: "address",
+          hash: exchangeAddress
+        });
+        return link;
       }
       return "";
     },
     payoutAddressLink() {
-      if (this.transaction && this.transaction.status === statuses.finished) {
-        return this.fullTo
-          ? this.fullTo.addressExplorerMask.replace(
-              "$$",
-              this.transaction.payoutAddress
-            )
-          : "";
+      if (this.transaction && this.transaction.status === statuses.confirmed) {
+        const { toAddress, pair } = this.transaction;
+        const { to } = pairToObject({ pair });
+        const link = getLink({
+          asset: to,
+          path: "address",
+          hash: toAddress
+        });
+        return link;
       }
       return "";
     },
     payoutHashLink() {
-      if (this.transaction && this.transaction.status === statuses.finished) {
-        return this.fullTo
-          ? this.fullTo.transactionExplorerMask.replace(
-              "$$",
-              this.transaction.payoutHash
-            )
-          : "";
+      if (this.transaction && this.transaction.status === statuses.confirmed) {
+        const { toTx, pair } = this.transaction;
+        const { to } = pairToObject({ pair });
+        const link = getLink({
+          asset: to,
+          path: "tx",
+          hash: toTx
+        });
+        return link;
       }
       return "";
     },
     exchangeRate() {
-      if (this.transaction && this.transaction.status === statuses.finished) {
-        const {
-          amountReceive,
-          amountSend,
-          fromCurrency,
-          toCurrency
-        } = this.transaction;
-        const rate = Number(amountReceive) / Number(amountSend);
-        return `1 ${fromCurrency} ≈ ${rate.toFixed(7)} ${toCurrency}`;
-      }
-      return "";
-    },
-    hasProfit() {
-      if (this.transaction && this.transaction.status === statuses.finished) {
-        const {
-          amountReceive,
-          expectedReceiveAmount,
-          toCurrency
-        } = this.transaction;
-        const profit = Number(amountReceive) - Number(expectedReceiveAmount);
-        return profit > 0 ? `${profit.toFixed(8)} ${toCurrency}` : "";
+      if (this.transaction && this.transaction.status === statuses.confirmed) {
+        const { rate, fromAmount, pair } = this.transaction;
+        const { from, to } = pairToObject({ pair });
+        const quote = Number(rate) / Number(fromAmount);
+        return `1 ${from} ≈ ${quote.toFixed(7)} ${to}`;
       }
       return "";
     }
@@ -785,7 +797,6 @@ module.exports = {
       }
     },
     countSequence() {
-      console.log("countSequence.called");
       const price =
         this.amountTo && this.amountTo !== "-" && this.amount
           ? Number(this.amountTo / this.amount).toFixed(7)
@@ -801,7 +812,6 @@ module.exports = {
     },
 
     async getAllCurrencies() {
-      console.log("getAllCurrencies.called");
       try {
         const marketInfo = await this.api.getAllCurrencies();
         walletApi.storage.set("marketInfo", marketInfo);
@@ -819,7 +829,6 @@ module.exports = {
     },
 
     async recountTo() {
-      console.log("recountTo.called");
       const marketInfo = walletApi.storage.get("marketInfo");
       const { from, to } = this;
 
@@ -827,8 +836,11 @@ module.exports = {
         this.isCounting = true;
         const currentPair = `${from}-${to}`;
         const amount = this.amount;
-        if (this.arkWallets.length && this.to === defaultTo) {
+        if (this.arkWallets.length && this.to === "ARK") {
           this.setArkAddress();
+        }
+        if (this.arkWallets.length && this.from === "ARK") {
+          this.setRefundArkAddress();
         }
         try {
           const { quote, minerFee, maxLimit, minLimit } = marketInfo.find(
@@ -853,7 +865,6 @@ module.exports = {
           this.amountTo = amountTo.toFixed(8);
           this.hasError = false;
         } catch (error) {
-          console.log("recountTo.error", { error });
           this.amountTo = 0;
           this.hasError = true;
           if (error.body) {
@@ -898,9 +909,16 @@ module.exports = {
     },
     toggleCurrancies() {
       const prevFrom = this.from;
+      const prevFromEx = this.fromHasExternalId;
+      const prevRecipient = this.recipientWallet;
       this.from = this.to;
       this.to = prevFrom;
-      this.externalId = "";
+      this.fromHasExternalId = this.toHasExternalId;
+      this.toHasExternalId = prevFromEx;
+      this.recipientWallet = this.refundWallet;
+      this.refundWallet = prevRecipient;
+      this.fromExternalId = "";
+      this.toExternalId = "";
       this.recountTo();
     },
     openSelectFrom() {
@@ -924,6 +942,7 @@ module.exports = {
       this.refs.currencySelectFrom.style.display = "none";
       this.isListFromOpen = false;
       this.fromFilter = "";
+      this.fromHasExternalId = symbolsWithTag.includes(asset);
     },
     selectCoinTo(asset) {
       this.to = asset;
@@ -932,6 +951,7 @@ module.exports = {
       this.refs.currencySelectTo.style.display = "none";
       this.isListToOpen = false;
       this.toFilter = "";
+      this.toHasExternalId = symbolsWithTag.includes(asset);
     },
     isNumber(event) {
       const value = event.target.value.trim();
@@ -956,13 +976,12 @@ module.exports = {
           fromAmount: String(this.amount)
         };
 
-        if (this.recipientWalletTag) {
-          params.toAddressTag = this.recipientWalletTag;
+        if (this.toExternalId) {
+          params.toAddressTag = this.toExternalId;
         }
-        if (this.refundWalletTag) {
-          params.refundAddressTag = this.refundWalletTag;
+        if (this.fromExternalId) {
+          params.refundAddressTag = this.fromExternalId;
         }
-        console.log(params);
         this.creating = true;
         try {
           this.statusTimer = walletApi.timers.setInterval(() => {
@@ -974,7 +993,6 @@ module.exports = {
           await this.checkTransactionStatus();
           this.currentStep = 3;
         } catch (error) {
-          console.log({ error });
           walletApi.alert.error(`Faled to create transaction.`);
         } finally {
           this.creating = false;
@@ -985,12 +1003,19 @@ module.exports = {
       if (!this.transaction) {
         return;
       }
-      const { orderId } = this.transaction;
+      const { orderId, pair } = this.transaction;
       try {
         const transactionData = await this.api.getTransactionStatus(orderId);
+
         this.transaction = transactionData;
+        if (pair) {
+          const { from, to } = pairToObject({ pair });
+          this.transaction.from = from;
+          this.transaction.to = to;
+        }
+        this.transaction.updatedAt = new Date();
         if (finishedStatuses.includes(transactionData.status)) {
-          if (transactionData.status === statuses.finished) {
+          if (transactionData.status === statuses.confirmed) {
             this.currentStep = 4;
           }
           walletApi.storage.set("transactionId", null);
@@ -1006,21 +1031,27 @@ module.exports = {
       const storageAmount = walletApi.storage.get("amount");
       const storageTo = walletApi.storage.get("toCurrency");
       const lastId = walletApi.storage.get("transactionId");
+
       const profile = walletApi.profiles.getCurrent();
       this.arkWallets = profile.wallets.map(wallet => {
         return wallet.name ? wallet.name : wallet.address;
       });
       if (storageFrom) {
         this.from = storageFrom;
+        this.fromHasExternalId = symbolsWithTag.includes(storageFrom);
       }
       if (storageTo) {
         this.to = storageTo;
+        this.toHasExternalId = symbolsWithTag.includes(storageTo);
       }
       if (storageAmount) {
         this.amount = storageAmount;
       }
-      if (this.arkWallets.length && this.to && this.to.ticker === defaultTo) {
+      if (this.arkWallets.length && this.to && this.to === defaultTo) {
         this.setArkAddress();
+      }
+      if (this.arkWallets.length && this.from && this.from === "ARK") {
+        this.setRefundArkAddress();
       }
       try {
         if (lastId) {
@@ -1028,7 +1059,7 @@ module.exports = {
             this.checkTransactionStatus();
           }, exchangeInterval);
           this.transaction = {
-            id: lastId
+            orderId: lastId
           };
           await this.checkTransactionStatus();
           this.currentStep = 3;
@@ -1062,7 +1093,7 @@ module.exports = {
       this.currentStep = 1;
     },
     async startNewTransaction() {
-      walletApi.storage.set("orderId", null);
+      walletApi.storage.set("transactionId", null);
       walletApi.route.goTo("switchain");
     },
     setArkAddress(value) {
@@ -1079,6 +1110,21 @@ module.exports = {
         return;
       }
       this.recipientWallet = selectedWallet.address;
+    },
+    setRefundArkAddress(value) {
+      if (!value) {
+        value = this.arkWallets[0];
+      }
+      const profile = walletApi.profiles.getCurrent();
+      const selectedWallet = profile.wallets.find(wallet => {
+        return wallet.name === value || wallet.address === value;
+      });
+      this.selectRefundValue = value;
+      if (!selectedWallet) {
+        this.refundWallet = profile.wallets[0].address;
+        return;
+      }
+      this.refundWallet = selectedWallet.address;
     }
   },
   created() {

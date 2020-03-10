@@ -1,8 +1,7 @@
 const ApiWorker = require("../apiWorker");
 const style = require("./mainPageStyles");
-const { longName } = require("../constants");
+const { defaultFrom, defaultTo, defaultAmount } = require("../constants");
 const { pairToObject } = require("../utils/validators");
-const { defaultFrom, defaultTo, defaultAmount } = require("../config.json");
 
 const {
   pluginContainer,
@@ -110,20 +109,26 @@ module.exports = {
               <v-popoveroffset="1">
                 <button class="pl-3" style="padding-bottom: 4px; color: #3bee81; font-size: 12px;">Expected rate</button>
                 <template slot="popover" >
-                  <div style="background-color: white; max-width: 250px; padding: 20px; border-radius: 3px; box-shadow: 0 4px 20px rgba(0,0,0,.45);">
+                  <div
+                    style="background-color: white; max-width: 250px; padding: 20px; border-radius: 3px; box-shadow: 0 4px 20px rgba(0,0,0,.45);"
+                  >
                     <h4 style="color: #5c5780; font-size: 16px; margin-bottom: 10px;">This is an expected rate</h4>
-                    <p style="color: #2b2b37; font-size: 14px; margin: 20px 0;">
-                      Switchain will pick the best rate for you during the moment of the exchange.
-                    </p>
-                    <a href="https://www.switchain.com/faq"
-                      style="color: #3bee81; font-size: 12px;" target="_blank" rel="noopener">
-                        <div class="flex items-center">
-                          Learn More
-                          <div style="font-size: 6px; margin-left: 3px; padding-bottom: 2px;">
-                            <font-awesome-icon :icon="faExternalLinkAlt" size="lg"/>
-                          </div>
+                    <p
+                      style="color: #2b2b37; font-size: 14px; margin: 20px 0;"
+                    >Switchain will pick the best rate for you during the moment of the exchange.</p>
+                    <a
+                      href="https://www.switchain.com/faq"
+                      style="color: #3bee81; font-size: 12px;"
+                      target="_blank"
+                      rel="noopener"
+                    >
+                      <div class="flex items-center">
+                        Learn More
+                        <div style="font-size: 6px; margin-left: 3px; padding-bottom: 2px;">
+                          <font-awesome-icon :icon="faExternalLinkAlt" size="lg" />
                         </div>
-                      </a>
+                      </div>
+                    </a>
                   </div>
                 </template>
               </v-popover>
@@ -192,7 +197,6 @@ module.exports = {
       initializing: true,
       fromFilter: "",
       toFilter: "",
-      longName: {},
       sequence: "",
       isListFromOpen: false,
       isListToOpen: false
@@ -207,11 +211,13 @@ module.exports = {
       return this.to || defaultTo;
     },
     filtredFrom() {
-      const filter = this.currencies.filter(currency => currency !== this.from);
+      let filter = this.currencies.filter(currency => currency !== this.from);
+      if (this.fromFilter) filter = filter.filter(c => c === this.fromFilter);
       return filter;
     },
     filtredTo() {
       const filter = this.currencies.filter(currency => currency !== this.to);
+      if (this.toFilter) filter = filter.filter(c => c === this.toFilter);
       return filter;
     }
   },
@@ -384,7 +390,6 @@ module.exports = {
     this.api = new ApiWorker(walletApi.http);
   },
   async mounted() {
-    this.longName = longName;
     await this.initialize();
   }
 };
