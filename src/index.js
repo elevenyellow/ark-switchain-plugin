@@ -19,8 +19,6 @@ module.exports = {
         title: "Switchain"
       }
     ];
-
-    console.log(`I'm a plugin reload dale`);
   },
   getComponentPaths() {
     return this.routes.reduce((all, route) => {
