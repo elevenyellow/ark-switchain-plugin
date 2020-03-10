@@ -229,10 +229,10 @@ const currencyList = `
 
 const currencyItem = `
   display: flex;
-  padding: 2px 14px;
+  padding: 7px 14px;
   cursor: pointer;
   display: flex;
-  font-size: 12px;
+  font-size: 14px;
   align-items: center;
 `;
 

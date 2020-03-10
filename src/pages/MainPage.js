@@ -248,7 +248,6 @@ module.exports = {
       }
     },
     countSequence() {
-      console.log("countSequence.called");
       const price =
         this.amountTo && this.amountTo !== "-" && this.amount
           ? Number(this.amountTo / this.amount).toFixed(7)
@@ -259,7 +258,6 @@ module.exports = {
     },
 
     async getAllCurrencies() {
-      console.log("getAllCurrencies.called");
       try {
         const marketInfo = await this.api.getAllCurrencies();
         walletApi.storage.set("marketInfo", marketInfo);
@@ -277,7 +275,6 @@ module.exports = {
     },
 
     async recountTo() {
-      console.log("recountTo.called");
       const marketInfo = walletApi.storage.get("marketInfo");
       const { from, to } = this;
       if (marketInfo.length && from && to) {
@@ -299,7 +296,6 @@ module.exports = {
       }
     },
     startRecount() {
-      console.log("startRecount.called");
       walletApi.storage.set("amount", this.amount);
       if (this.recountTimeout) {
         walletApi.timers.clearTimeout(this.recountTimeout);
@@ -309,7 +305,6 @@ module.exports = {
       }, 500);
     },
     toggleCurrancies() {
-      console.log("toggleCurrancies.called");
       const prevFrom = this.from;
       this.from = this.to;
       this.to = prevFrom;
