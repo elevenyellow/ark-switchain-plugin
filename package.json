@@ -1,6 +1,6 @@
 {
-  "name": "sw-ark-plugin",
-  "version": "0.0.1",
+  "name": "ark-switchain-plugin",
+  "version": "1.0.0",
   "title": "ARK Exchange from Switchain",
   "description": "Switchain plugin on Ark Desktop Wallet",
   "logo": "https://www.switchain.com/img/logo.svg",
@@ -26,6 +26,7 @@
       "UI_COMPONENTS"
     ],
     "urls": [
+      "https://api.switchain.com/rest/v1/",
       "https://api-testnet.switchain.com/rest/v1/"
     ],
     "minVersion": "2.6"
@@ -39,7 +40,7 @@
     "swap"
   ],
   "bugs": {
-    "url": "URL"
+    "url": "https://github.com/elevenyellow/ark-switchain-plugin/issues"
   },
   "homepage": "URL",
   "repository": {
