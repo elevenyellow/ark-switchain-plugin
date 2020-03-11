@@ -3,11 +3,11 @@ const API_BASE_URL = "https://api.switchain.com/rest/v1/";
 // const API_BASE_URL = "http://localhost:3020/rest/v1/";
 // const API_BASE_URL = "https://api-testnet.switchain.com/rest/v1/";
 
-const API_KEY = config.apiKey;
+const ARK_KEY = config.ARK;
 
 const headers = {
   "Content-type": "application/json",
-  Authorization: `Bearer ${API_KEY}`
+  Authorization: `Bearer ${ARK_KEY}`
 };
 
 class ApiWorker {
