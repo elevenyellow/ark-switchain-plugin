@@ -1,14 +1,20 @@
 {
   "name": "@elevenyellow.com/ark-switchain-plugin",
-  "version": "1.0.0",
-  "title": "ARK Exchange from Switchain",
+  "version": "1.1.0",
+  "title": "Switchain Exchange",
   "description": "Switchain plugin on Ark Desktop Wallet",
-  "logo": "https://www.switchain.com/img/logo.svg",
+  "logo": "https://raw.githubusercontent.com/elevenyellow/ark-switchain-plugin/master/logo.png",
   "main": "src/index.js",
   "author": "Switchain",
   "license": "MIT",
   "desktop-wallet": {
     "title": "ARK Exchange from Switchain",
+    "logo": "https://raw.githubusercontent.com/elevenyellow/ark-switchain-plugin/master/logo.png",
+    "images": [
+      "https://raw.githubusercontent.com/elevenyellow/ark-switchain-plugin/master/src/img/preview-1.png",
+      "https://raw.githubusercontent.com/elevenyellow/ark-switchain-plugin/master/src/img/preview-2.png",
+      "https://raw.githubusercontent.com/elevenyellow/ark-switchain-plugin/master/src/img/preview-3.png"
+    ],
     "categories": [],
     "permissions": [
       "COMPONENTS",
@@ -26,7 +32,8 @@
       "UI_COMPONENTS"
     ],
     "urls": [
-      "https://api.switchain.com/rest/v1/"
+      "https://api.switchain.com/rest/v1/",
+      "https://raw.githubusercontent.com/elevenyellow/ark-switchain-plugin/master/logo.png"
     ],
     "minVersion": "2.6"
   },

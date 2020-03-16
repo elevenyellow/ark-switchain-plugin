@@ -216,7 +216,7 @@ module.exports = {
       return filter;
     },
     filtredTo() {
-      const filter = this.currencies.filter(currency => currency !== this.to);
+      let filter = this.currencies.filter(currency => currency !== this.to);
       if (this.toFilter) filter = filter.filter(c => c === this.toFilter);
       return filter;
     }
@@ -375,6 +375,9 @@ module.exports = {
       try {
         await this.getAllCurrencies();
         await this.recountTo();
+        this.from = defaultFrom;
+        this.to = defaultTo;
+        this.amount = defaultAmount;
         this.initializing = false;
       } finally {
         this.initializing = false;

@@ -1,7 +1,7 @@
 const ApiWorker = require("../apiWorker");
 const style = require("./mainPageStyles");
 const stepperStyle = require("./stepperStyles");
-const { defaultFrom, defaultTo } = require("../config.json");
+const { defaultFrom, defaultTo } = require("../constants");
 
 const {
   errorType,
@@ -888,7 +888,7 @@ module.exports = {
           }
           if (error.message) {
             walletApi.alert.error(
-              `Faled to fetch available currencies. Reason: ${error.message}.`
+              `Fail to fetch available currencies. Reason: ${error.message}.`
             );
             return;
           }
@@ -993,7 +993,7 @@ module.exports = {
           await this.checkTransactionStatus();
           this.currentStep = 3;
         } catch (error) {
-          walletApi.alert.error(`Faled to create transaction.`);
+          walletApi.alert.error(`Fail to create transaction.`);
         } finally {
           this.creating = false;
         }
@@ -1022,7 +1022,7 @@ module.exports = {
           walletApi.timers.clearInterval(this.statusTimer);
         }
       } catch (error) {
-        walletApi.alert.error(`Faled to fetch transaction data.`);
+        walletApi.alert.error(`Fail to fetch transaction data.`);
       }
     },
     async initialize() {
@@ -1072,7 +1072,7 @@ module.exports = {
       } catch (error) {
         if (error.message) {
           walletApi.alert.error(
-            `Faled to fetch available currencies. Reason: ${error.message}.`
+            `Fail to fetch available currencies. Reason: ${error.message}.`
           );
           return;
         }
