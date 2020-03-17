@@ -188,8 +188,8 @@ module.exports = {
       amountTo: 0,
       currencies: [],
       marketInfo: [],
-      from: null,
-      to: null,
+      from: defaultFrom,
+      to: defaultTo,
       api: {},
       isCounting: false,
       recountTimer: null,
@@ -375,9 +375,6 @@ module.exports = {
       try {
         await this.getAllCurrencies();
         await this.recountTo();
-        this.from = defaultFrom;
-        this.to = defaultTo;
-        this.amount = defaultAmount;
         this.initializing = false;
       } finally {
         this.initializing = false;

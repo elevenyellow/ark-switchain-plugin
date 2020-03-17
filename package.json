@@ -1,6 +1,6 @@
 {
   "name": "@elevenyellow.com/ark-switchain-plugin",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "title": "Switchain Exchange",
   "description": "Switchain plugin on Ark Desktop Wallet",
   "logo": "https://raw.githubusercontent.com/elevenyellow/ark-switchain-plugin/master/logo.png",
