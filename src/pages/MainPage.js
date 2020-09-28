@@ -166,9 +166,7 @@ module.exports = {
               </div>
             </div>
             </div>
-            <router-link :to="{ name: 'stepper'}">
-              <button class="hover:opacity-75" style="${exchangeButton}">Exchange</button>
-            </router-link>
+            <button @click="goTo('stepper')" class="hover:opacity-75" style="${exchangeButton}">Exchange</button>
           </div>
         </div>
       </div>
@@ -223,6 +221,9 @@ module.exports = {
   },
 
   methods: {
+    goTo (route) {
+      walletApi.route.goTo(route);
+    },
     outSideClick(event) {
       const domElements = event.path;
       const cfl = this.refs.currencySelectFrom;
@@ -361,7 +362,7 @@ module.exports = {
       const lastId = walletApi.storage.get("orderId");
       walletApi.storage.set("amount", this.amount);
       if (lastId) {
-        walletApi.route.goTo("stepper");
+        this.goTo("stepper");
         return;
       }
 
