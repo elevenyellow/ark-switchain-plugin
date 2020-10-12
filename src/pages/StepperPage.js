@@ -112,7 +112,7 @@ module.exports = {
   template: `
     <div class="rounded-lg px-0 py-2 flex flex-col" style="${pluginContainer}" @click="outSideClick">
       <div style="${mainPageHeader}">
-        <img src="https://www.switchain.com/img/logo.svg" id="sw-logo">
+        <img src="https://www.switchain.com/svg/sw-logo.svg" id="sw-logo">
         <div class="sm:block hidden" style="width: 1px; height: 40px; margin: 0 15px 0 10px;"></div>
         <div class="sm:block hidden" style="color: #FFF; font-size: 14px; margin-top:10px">best cryptocurrency exchange rates</div>
       </div>
@@ -311,9 +311,7 @@ module.exports = {
               <button v-else style="${stepButton} ${buttonGreen}"
               class="hover:opacity-75 disabled:bg-gray" :disabled="!validParams"
               @click.prevent="switchToTwoStep">Next</button>
-              <router-link :to="{ name: 'switchain'}">
-                <button class="hover:opacity-75" style="${stepButton} ${buttonWhite}">Back</button>
-              </router-link>
+              <button @click="goTo('switchain')" class="hover:opacity-75" style="${stepButton} ${buttonWhite}">Back</button>
             </div>
           </div>
           <div v-if="currentStep === 2" style="${stepContainer}">
@@ -768,6 +766,9 @@ module.exports = {
     }
   },
   methods: {
+    goTo (route) {
+      walletApi.route.goTo(route);
+    },
     parseDate(date) {
       const time = new Date(date);
       return time.toLocaleString();
@@ -1094,7 +1095,7 @@ module.exports = {
     },
     async startNewTransaction() {
       walletApi.storage.set("transactionId", null);
-      walletApi.route.goTo("switchain");
+      this.goTo("switchain");
     },
     setArkAddress(value) {
       if (!value) {

@@ -54,7 +54,7 @@ module.exports = {
   template: `
     <div class="rounded-lg px-0 py-2 flex flex-col" style="${pluginContainer}" @click="outSideClick">
       <div style="${mainPageHeader}">
-        <img src="https://www.switchain.com/img/logo.svg" id="sw-logo">
+        <img src="https://www.switchain.com/svg/sw-logo.svg" id="sw-logo">
         <div class="sm:block hidden" style="width: 1px; height: 40px; margin: 0 15px 0 10px;"></div>
         <div class="sm:block hidden" style="color: #FFF; font-size: 14px; margin-top:10px">best cryptocurrency exchange rates</div>
       </div>
@@ -166,9 +166,7 @@ module.exports = {
               </div>
             </div>
             </div>
-            <router-link :to="{ name: 'stepper'}">
-              <button class="hover:opacity-75" style="${exchangeButton}">Exchange</button>
-            </router-link>
+            <button @click="goTo('stepper')" class="hover:opacity-75" style="${exchangeButton}">Exchange</button>
           </div>
         </div>
       </div>
@@ -223,6 +221,9 @@ module.exports = {
   },
 
   methods: {
+    goTo (route) {
+      walletApi.route.goTo(route);
+    },
     outSideClick(event) {
       const domElements = event.path;
       const cfl = this.refs.currencySelectFrom;
@@ -361,7 +362,7 @@ module.exports = {
       const lastId = walletApi.storage.get("orderId");
       walletApi.storage.set("amount", this.amount);
       if (lastId) {
-        walletApi.route.goTo("stepper");
+        this.goTo("stepper");
         return;
       }
 
